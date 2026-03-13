@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carbon Emission Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #e0f2fe 0%, #f0fdf4 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        .slide-in {
+            animation: slideIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .tree-icon {
+            color: #15803d;
+            animation: grow 3s infinite ease-in-out;
+        }
+        @keyframes grow {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
+        
+        .pulse-dot {
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            animation: pulse-red 2s infinite;
+        }
+        @keyframes pulse-red {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        /* Live Indicator Animation */
+        .pulse-green {
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+            animation: pulse-green-anim 2s infinite;
+        }
+        @keyframes pulse-green-anim {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+
+        /* Falling Leaves Animation */
+        .leaf-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+        .leaf {
+            position: absolute;
+            top: -10%;
+            opacity: 0;
+            animation: fall linear infinite;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+        }
+        @keyframes fall {
+            0% { 
+                transform: translateY(-10vh) translateX(0) rotate(0deg); 
+                opacity: 0; 
+            }
+            10% { opacity: 0.9; } 
+            50% { 
+                transform: translateY(50vh) translateX(40px) rotate(180deg); 
+            }
+            100% { 
+                transform: translateY(110vh) translateX(-40px) rotate(360deg); 
+                opacity: 0; 
+            }
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4 relative">
+
+    <div id="leafContainer" class="leaf-container"></div>
+
+    <div class="w-full max-w-2xl bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl overflow-hidden relative min-h-[650px] flex flex-col border border-gray-100 z-10 transition-all duration-300">
+        
+        <div class="bg-teal-700 h-40 w-full flex items-center justify-center relative overflow-hidden group">
+            <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1518173946687-a4c8892bbd9f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80')] bg-cover bg-center opacity-20 mix-blend-overlay transition-transform duration-1000 group-hover:scale-105"></div>
+            <div class="absolute inset-0 bg-gradient-to-r from-teal-800 to-green-600 opacity-90"></div>
+            
+            <div class="relative z-10 text-center">
+                <div class="inline-block p-3 rounded-full bg-white/10 mb-2 backdrop-blur-md">
+                    <i class="fas fa-leaf text-white text-2xl"></i>
+                </div>
+                <h1 class="text-2xl md:text-3xl font-bold text-white tracking-wide drop-shadow-md px-4 leading-tight">
+                    Carbon Emission Tracker of Campus
+                </h1>
+            </div>
+        </div>
+
+        <!-- PAGE 1: INPUT FORM -->
+        <div id="inputPage" class="p-8 pt-6 flex-1 flex flex-col justify-center slide-in">
+            <p class="text-gray-600 text-center mb-8 text-lg">
+                Calculate the <strong>Campus's</strong> environmental footprint. <br>
+                <span class="text-sm text-gray-400">Enter usage manually or fetch from smart meter.</span>
+            </p>
+
+            <form id="carbonForm" class="space-y-6">
+                <!-- Electricity Input with IoT Button -->
+                <div class="relative group">
+                    <label class="block text-sm font-bold text-gray-700 mb-2 flex items-center justify-between">
+                        <div class="flex items-center">
+                            <span class="bg-yellow-100 p-1.5 rounded-lg mr-2"><i class="fas fa-bolt text-yellow-500"></i></span> 
+                            Electricity Usage
+                        </div>
+                        <button type="button" onclick="fetchMeterData()" class="text-xs bg-teal-100 text-teal-700 px-3 py-1 rounded-full hover:bg-teal-200 transition-colors flex items-center gap-1">
+                            <i class="fas fa-wifi"></i> Fetch Live Meter
+                        </button>
+                    </label>
+                    <div class="flex items-center">
+                        <input type="number" id="electricity" placeholder="e.g. 500" min="0" step="0.1" class="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all outline-none text-gray-700 font-medium" required>
+                        <span class="absolute right-4 text-gray-400 font-medium text-sm">kWh</span>
+                    </div>
+                    <p id="meterStatus" class="text-xs text-gray-400 mt-1 pl-1 h-4"></p>
+                </div>
+
+                <!-- Diesel -->
+                <div class="relative group">
+                    <label class="block text-sm font-bold text-gray-700 mb-2 flex items-center">
+                        <span class="bg-blue-100 p-1.5 rounded-lg mr-2"><i class="fas fa-gas-pump text-blue-500"></i></span> Diesel Consumption
+                    </label>
+                    <div class="flex items-center">
+                        <input type="number" id="diesel" placeholder="e.g. 50" min="0" step="0.1" class="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all outline-none text-gray-700 font-medium" required>
+                        <span class="absolute right-4 text-gray-400 font-medium text-sm">Liters</span>
+                    </div>
+                </div>
+
+                <!-- LPG -->
+                <div class="relative group">
+                    <label class="block text-sm font-bold text-gray-700 mb-2 flex items-center">
+                        <span class="bg-red-100 p-1.5 rounded-lg mr-2"><i class="fas fa-burn text-red-500"></i></span> LPG Consumption
+                    </label>
+                    <div class="flex items-center">
+                        <input type="number" id="lpg" placeholder="e.g. 10" min="0" step="0.01" class="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all outline-none text-gray-700 font-medium" required>
+                        <span class="absolute right-4 text-gray-400 font-medium text-sm">kg</span>
+                    </div>
+                </div>
+
+                <!-- Wood -->
+                <div class="relative group">
+                    <label class="block text-sm font-bold text-gray-700 mb-2 flex items-center">
+                        <span class="bg-amber-100 p-1.5 rounded-lg mr-2"><i class="fas fa-tree text-amber-700"></i></span> Wood Consumption
+                    </label>
+                    <div class="flex items-center">
+                        <input type="number" id="wood" placeholder="e.g. 5" min="0" step="0.5" class="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all outline-none text-gray-700 font-medium" required>
+                        <span class="absolute right-4 text-gray-400 font-medium text-sm">kg</span>
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full bg-gradient-to-r from-teal-600 to-green-600 hover:from-teal-700 hover:to-green-700 text-white font-bold py-4 rounded-xl shadow-lg transform transition hover:-translate-y-1 hover:shadow-xl mt-6 flex items-center justify-center gap-2">
+                    <span>Calculate Campus Impact</span> <i class="fas fa-arrow-right"></i>
+                </button>
+            </form>
+        </div>
+
+        <!-- PAGE 2: RESULTS -->
+        <div id="resultPage" class="hidden p-8 flex-1 flex flex-col items-center justify-center slide-in text-center relative pb-10">
+            
+            <div id="liveDashboard" class="w-full mb-6 bg-teal-50/50 rounded-xl border border-teal-100 p-4 flex justify-between items-center shadow-sm">
+                <div class="flex flex-col text-left">
+                    <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                        <span class="w-2 h-2 bg-red-500 rounded-full pulse-dot"></span> <span id="locationName">Live Location</span>
+                    </h3>
+                    <div class="flex items-baseline mt-1 gap-1">
+                        <span id="liveTemp" class="text-2xl font-bold text-gray-800">--</span>
+                        <span class="text-sm text-gray-500">°C</span>
+                    </div>
+                </div>
+                <div class="h-8 w-px bg-teal-200/50"></div>
+                <div class="flex flex-col items-end">
+                    <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Air Quality (AQI)</h3>
+                    <div class="flex items-center mt-1 gap-2">
+                        <i class="fas fa-wind text-gray-400 text-sm"></i>
+                        <span id="liveAQI" class="text-2xl font-bold text-gray-800">--</span>
+                    </div>
+                    <span id="dataSource" class="text-[9px] text-gray-400 mt-1 uppercase tracking-wide">Fetching...</span>
+                </div>
+            </div>
+
+            <!-- Header -->
+            <div class="mb-4 bg-teal-50 p-6 rounded-full h-28 w-28 flex items-center justify-center shadow-inner ring-4 ring-teal-100">
+                <i class="fas fa-chart-line text-5xl text-teal-600"></i>
+            </div>
+            
+            <h2 class="text-xl font-bold text-gray-500 mb-1 uppercase tracking-wide">Carbon Emission</h2>
+            
+            <div class="flex items-center justify-center gap-4 mb-6">
+                <div class="text-5xl font-extrabold text-teal-800">
+                    <span id="totalEmission">0</span> <span class="text-2xl text-teal-600">kg CO₂</span>
+                </div>
+                
+                <!-- Live Indicator (Hidden by default, appears next to emission value) -->
+                <div id="liveIndicator" class="hidden bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-sm self-start mt-2">
+                    Live Updating <span class="w-1.5 h-1.5 bg-green-500 rounded-full pulse-green"></span>
+                </div>
+            </div>
+            
+            <div class="w-full bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-xl p-6 mb-8 relative overflow-hidden shadow-sm">
+                <div class="absolute top-0 left-0 w-1.5 h-full bg-green-500"></div>
+                <h3 class="text-lg font-bold text-gray-700 mb-2 flex items-center justify-center gap-2">
+                    <i class="fas fa-leaf text-green-500"></i> Nature's Offset Plan
+                </h3>
+                <p class="text-sm text-gray-600 mb-4">If the campus maintains this <strong>daily</strong> emission for a year, we need to plant:</p>
+                <div class="flex items-center justify-center space-x-3 bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                    <i class="fas fa-seedling text-3xl tree-icon"></i>
+                    <span id="treesNeeded" class="text-4xl font-bold text-gray-800">0</span>
+                    <span class="text-lg text-gray-600 font-medium self-end mb-1">Trees</span>
+                </div>
+            </div>
+
+            <!-- Breakdown Bars -->
+            <div class="w-full mb-8 px-2">
+                <div class="flex justify-between items-end mb-4 border-b border-gray-100 pb-2">
+                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Source Breakdown</h4>
+                    <span class="text-xs text-teal-600 font-semibold">% Contribution</span>
+                </div>
+                <div class="grid grid-cols-4 gap-4 w-full text-xs text-gray-500 font-medium h-48 items-end">
+                    <div class="text-center group flex flex-col items-center h-full justify-end">
+                        <div class="w-full h-32 bg-gray-100 rounded-lg mb-2 relative flex flex-col justify-end overflow-hidden shadow-inner">
+                             <div id="barElec" class="w-full bg-yellow-400 transition-all duration-1000 ease-out opacity-90 hover:opacity-100" style="height: 0%"></div>
+                        </div>
+                        <span class="block font-semibold">Electricity</span>
+                        <span id="pctElec" class="block text-[11px] font-bold text-teal-600 mt-1 bg-teal-50 px-2 py-0.5 rounded-full">0%</span>
+                    </div>
+                    <div class="text-center group flex flex-col items-center h-full justify-end">
+                        <div class="w-full h-32 bg-gray-100 rounded-lg mb-2 relative flex flex-col justify-end overflow-hidden shadow-inner">
+                             <div id="barDiesel" class="w-full bg-blue-400 transition-all duration-1000 ease-out opacity-90 hover:opacity-100" style="height: 0%"></div>
+                        </div>
+                        <span class="block font-semibold">Diesel</span>
+                        <span id="pctDiesel" class="block text-[11px] font-bold text-teal-600 mt-1 bg-teal-50 px-2 py-0.5 rounded-full">0%</span>
+                    </div>
+                    <div class="text-center group flex flex-col items-center h-full justify-end">
+                        <div class="w-full h-32 bg-gray-100 rounded-lg mb-2 relative flex flex-col justify-end overflow-hidden shadow-inner">
+                             <div id="barLPG" class="w-full bg-red-400 transition-all duration-1000 ease-out opacity-90 hover:opacity-100" style="height: 0%"></div>
+                        </div>
+                        <span class="block font-semibold">LPG</span>
+                        <span id="pctLPG" class="block text-[11px] font-bold text-teal-600 mt-1 bg-teal-50 px-2 py-0.5 rounded-full">0%</span>
+                    </div>
+                    <div class="text-center group flex flex-col items-center h-full justify-end">
+                        <div class="w-full h-32 bg-gray-100 rounded-lg mb-2 relative flex flex-col justify-end overflow-hidden shadow-inner">
+                             <div id="barWood" class="w-full bg-amber-600 transition-all duration-1000 ease-out opacity-90 hover:opacity-100" style="height: 0%"></div>
+                        </div>
+                        <span class="block font-semibold">Wood/Biomass</span>
+                        <span id="pctWood" class="block text-[11px] font-bold text-teal-600 mt-1 bg-teal-50 px-2 py-0.5 rounded-full">0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Emission Breakdown -->
+            <div class="w-full mb-8 bg-white rounded-xl border border-gray-100 p-6 shadow-sm">
+                <h4 class="text-sm font-bold text-gray-700 mb-4 uppercase tracking-wider text-left">Detailed Breakdown</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                    <div class="flex items-center p-3 bg-yellow-50 rounded-lg border border-yellow-100">
+                        <div class="bg-yellow-100 p-2 rounded-full mr-3"><i class="fas fa-bolt text-yellow-500"></i></div>
+                        <div>
+                            <p class="text-sm font-semibold text-gray-700">Electricity</p>
+                            <p class="text-xs text-gray-500">EF: <span id="efElec"></span> kg CO₂/kWh</p>
+                            <p class="text-lg font-bold text-teal-700"><span id="emisElec">0</span> kg CO₂</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center p-3 bg-blue-50 rounded-lg border border-blue-100">
+                        <div class="bg-blue-100 p-2 rounded-full mr-3"><i class="fas fa-gas-pump text-blue-500"></i></div>
+                        <div>
+                            <p class="text-sm font-semibold text-gray-700">Diesel</p>
+                            <p class="text-xs text-gray-500">EF: <span id="efDiesel"></span> kg CO₂/L</p>
+                            <p class="text-lg font-bold text-teal-700"><span id="emisDiesel">0</span> kg CO₂</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center p-3 bg-red-50 rounded-lg border border-red-100">
+                        <div class="bg-red-100 p-2 rounded-full mr-3"><i class="fas fa-burn text-red-500"></i></div>
+                        <div>
+                            <p class="text-sm font-semibold text-gray-700">LPG</p>
+                            <p class="text-xs text-gray-500">EF: <span id="efLPG"></span> kg CO₂/kg</p>
+                            <p class="text-lg font-bold text-teal-700"><span id="emisLPG">0</span> kg CO₂</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center p-3 bg-amber-50 rounded-lg border border-amber-100">
+                        <div class="bg-amber-100 p-2 rounded-full mr-3"><i class="fas fa-tree text-amber-700"></i></div>
+                        <div>
+                            <p class="text-sm font-semibold text-gray-700">Wood/Biomass</p>
+                            <p class="text-xs text-gray-500">EF: <span id="efWood"></span> kg CO₂/kg</p>
+                            <p class="text-lg font-bold text-teal-700"><span id="emisWood">0</span> kg CO₂</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Awareness Suggestions -->
+            <div class="w-full bg-teal-50 rounded-xl border border-teal-100 p-6 shadow-sm">
+                <h4 class="text-sm font-bold text-teal-800 mb-4 uppercase tracking-wider text-left flex items-center">
+                    <i class="fas fa-lightbulb mr-2"></i> Eco-Tips for a Greener Campus
+                </h4>
+                <ul class="text-left space-y-3 text-sm text-gray-600">
+                    <li class="flex items-start"><i class="fas fa-check-circle text-teal-500 mt-1 mr-3"></i><span>Turn off electrical loads in classrooms and labs when not in use.</span></li>
+                    <li class="flex items-start"><i class="fas fa-check-circle text-teal-500 mt-1 mr-3"></i><span>Switch to LED lighting in corridors and hostels to lower demand immediately.</span></li>
+                    <li class="flex items-start"><i class="fas fa-check-circle text-teal-500 mt-1 mr-3"></i><span>Unplug chargers and equipment in labs when they are not charging.</span></li>
+                    <li class="flex items-start"><i class="fas fa-check-circle text-teal-500 mt-1 mr-3"></i><span>Use natural light in the library and open areas whenever possible.</span></li>
+                    <li class="flex items-start"><i class="fas fa-check-circle text-teal-500 mt-1 mr-3"></i><span>Opt for college bus or carpooling to reduce emissions from personal vehicles.</span></li>
+                </ul>
+            </div>
+
+            <div class="flex gap-4 justify-center w-full mt-8">
+                <button onclick="resetCalculator()" class="bg-white border-2 border-teal-600 text-teal-600 hover:bg-teal-50 font-bold py-3 px-8 rounded-xl transition-colors w-full shadow-sm hover:shadow-md">
+                    <i class="fas fa-redo-alt mr-2"></i> Track Another
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- IoT CONFIGURATION ---
+        const CHANNEL_ID = "3222036"; 
+        const READ_API_KEY = "90JFFB3G0URWPMN6"; 
+
+        // --- LOCATION CONFIGURATION ---
+        const LAT = 10.230829; // Change Latitude here
+        const LON = 76.408503; // Change Longitude here
+        const LOCATION_NAME = "Live from Campus"; // Change displayed name here
+
+        // --- CONSTANTS ---
+        const FACTORS = { electricity: 0.701, diesel: 2.68, lpg: 2.98, wood: 1.65 };
+        const TREE_SEQUESTRATION = 25; 
+
+        // Set Location Name in UI
+        document.getElementById('locationName').innerText = LOCATION_NAME;
+
+        // State Variables
+        let isLiveMode = false;
+        let liveUpdateInterval = null;
+        let staticEmissions = { diesel: 0, lpg: 0, wood: 0 }; 
+
+        // Display EF values on load
+        document.getElementById('efElec').innerText = FACTORS.electricity;
+        document.getElementById('efDiesel').innerText = FACTORS.diesel;
+        document.getElementById('efLPG').innerText = FACTORS.lpg;
+        document.getElementById('efWood').innerText = FACTORS.wood;
+
+        // --- IoT FETCH FUNCTION (INPUT PAGE) ---
+        async function fetchMeterData() {
+            const statusEl = document.getElementById('meterStatus');
+            const inputEl = document.getElementById('electricity');
+            
+            statusEl.innerText = "Connecting to Smart Meter...";
+            statusEl.className = "text-xs mt-1 pl-1 h-4 text-gray-400";
+
+            if (!CHANNEL_ID || CHANNEL_ID === "YOUR_CHANNEL_ID") {
+                statusEl.innerText = "Error: API Keys not configured.";
+                statusEl.classList.add('text-red-500');
+                return;
+            }
+
+            try {
+                const url = `https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds/last.json?api_key=${READ_API_KEY}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                const energy = parseFloat(data.field1);
+
+                if (!isNaN(energy)) {
+                    // CHANGED: Uses toFixed(1) to show 0.6 instead of 0.62
+                    inputEl.value = energy.toFixed(1); 
+                    statusEl.innerText = "✔ Data fetched from ESP32 Sensor";
+                    statusEl.classList.remove('text-gray-400');
+                    statusEl.classList.add('text-green-500');
+                    isLiveMode = true; 
+                } else {
+                    statusEl.innerText = "Meter online but data invalid.";
+                    statusEl.classList.add('text-red-500');
+                }
+            } catch (e) {
+                statusEl.innerText = "Failed to connect. Check internet.";
+                statusEl.classList.add('text-red-500');
+            }
+        }
+
+        // Disable live mode if user manually types in electricity
+        document.getElementById('electricity').addEventListener('input', function() {
+            isLiveMode = false;
+            document.getElementById('meterStatus').innerText = "";
+        });
+
+        // --- ANIMATION: Bright Falling Leaves ---
+        function createLeaves() {
+            const container = document.getElementById('leafContainer');
+            for(let i=0; i<20; i++) {
+                const leaf = document.createElement('i');
+                leaf.classList.add('fas', 'fa-leaf', 'leaf', 'text-green-500', 'text-2xl');
+                leaf.style.left = Math.random() * 100 + '%';
+                leaf.style.animationDuration = (6 + Math.random() * 10) + 's';
+                leaf.style.animationDelay = '-' + (Math.random() * 10) + 's'; 
+                leaf.style.fontSize = (0.8 + Math.random() * 0.5) + 'rem';
+                container.appendChild(leaf);
+            }
+        }
+        createLeaves();
+
+        // --- FETCH WEATHER (Run once) ---
+        async function fetchCampusData() {
+            const tempEl = document.getElementById('liveTemp');
+            const aqiEl = document.getElementById('liveAQI');
+            const sourceEl = document.getElementById('dataSource');
+            try {
+                // Uses the variables defined at the top
+                const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current_weather=true`);
+                const weatherData = await weatherRes.json();
+                if (weatherData.current_weather) tempEl.innerText = weatherData.current_weather.temperature;
+
+                const aqiRes = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${LAT}&longitude=${LON}&current=us_aqi`);
+                const aqiData = await aqiRes.json();
+                if (aqiData.current && aqiData.current.us_aqi) {
+                    aqiEl.innerText = aqiData.current.us_aqi;
+                    colorCodeAQI(aqiData.current.us_aqi, aqiEl);
+                }
+                sourceEl.innerText = "Source: Satellite Model (Estimate)";
+            } catch (e) { sourceEl.innerText = "Data Offline"; }
+        }
+        function colorCodeAQI(aqi, element) {
+            element.className = "text-2xl font-bold"; 
+            if(aqi <= 50) element.classList.add('text-green-600');
+            else if(aqi <= 100) element.classList.add('text-yellow-600');
+            else if(aqi <= 150) element.classList.add('text-orange-600');
+            else element.classList.add('text-red-600');
+        }
+        fetchCampusData();
+
+        // --- CALCULATOR & LIVE UPDATE LOGIC ---
+        
+        document.getElementById('carbonForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // 1. Capture Manual Inputs (Constant for this session)
+            const diesel = parseFloat(document.getElementById('diesel').value) || 0;
+            const lpg = parseFloat(document.getElementById('lpg').value) || 0;
+            const wood = parseFloat(document.getElementById('wood').value) || 0;
+            
+            // Calculate static emissions once
+            staticEmissions.diesel = diesel * FACTORS.diesel;
+            staticEmissions.lpg = lpg * FACTORS.lpg;
+            staticEmissions.wood = wood * FACTORS.wood;
+
+            // 2. Initial Calculation
+            const elec = parseFloat(document.getElementById('electricity').value) || 0;
+            updateResultUI(elec);
+
+            // 3. Switch UI
+            document.getElementById('inputPage').classList.add('hidden');
+            document.getElementById('resultPage').classList.remove('hidden');
+
+            // 4. Start Live Update ONLY if fetched from meter
+            if (isLiveMode) {
+                document.getElementById('liveIndicator').classList.remove('hidden');
+                // Poll every 20 seconds
+                liveUpdateInterval = setInterval(updateLiveElectricity, 20000);
+            }
+        });
+
+        async function updateLiveElectricity() {
+            if (!CHANNEL_ID || CHANNEL_ID === "YOUR_CHANNEL_ID") return;
+            try {
+                const url = `https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds/last.json?api_key=${READ_API_KEY}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                const energy = parseFloat(data.field1);
+                
+                if (!isNaN(energy)) {
+                    // Update UI with new electricity value
+                    updateResultUI(energy);
+                    
+                    // Flash effect on total to show update
+                    const totalEl = document.getElementById('totalEmission');
+                    totalEl.classList.add('text-green-500');
+                    setTimeout(() => totalEl.classList.remove('text-green-500'), 500);
+                }
+            } catch (e) { console.error("Live update failed", e); }
+        }
+
+        function updateResultUI(elec) {
+            const elecEmission = elec * FACTORS.electricity;
+            const totalDaily = elecEmission + staticEmissions.diesel + staticEmissions.lpg + staticEmissions.wood;
+            const annual = totalDaily * 365;
+            const trees = Math.ceil(annual / TREE_SEQUESTRATION);
+
+            // Update Text
+            document.getElementById('totalEmission').innerText = totalDaily.toFixed(2);
+            document.getElementById('treesNeeded').innerText = trees; 
+            document.getElementById('emisElec').innerText = elecEmission.toFixed(2);
+            document.getElementById('emisDiesel').innerText = staticEmissions.diesel.toFixed(2);
+            document.getElementById('emisLPG').innerText = staticEmissions.lpg.toFixed(2);
+            document.getElementById('emisWood').innerText = staticEmissions.wood.toFixed(2);
+
+            // Update Bars
+            const totalForBars = totalDaily || 1;
+            document.getElementById('barElec').style.height = (elecEmission / totalForBars * 100) + '%';
+            document.getElementById('barDiesel').style.height = (staticEmissions.diesel / totalForBars * 100) + '%';
+            document.getElementById('barLPG').style.height = (staticEmissions.lpg / totalForBars * 100) + '%';
+            document.getElementById('barWood').style.height = (staticEmissions.wood / totalForBars * 100) + '%';
+
+            document.getElementById('pctElec').innerText = Math.round((elecEmission / totalForBars) * 100) + '%';
+            document.getElementById('pctDiesel').innerText = Math.round((staticEmissions.diesel / totalForBars) * 100) + '%';
+            document.getElementById('pctLPG').innerText = Math.round((staticEmissions.lpg / totalForBars) * 100) + '%';
+            document.getElementById('pctWood').innerText = Math.round((staticEmissions.wood / totalForBars) * 100) + '%';
+        }
+
+        function resetCalculator() {
+            document.getElementById('carbonForm').reset();
+            document.getElementById('resultPage').classList.add('hidden');
+            document.getElementById('inputPage').classList.remove('hidden');
+            
+            // Stop live updates
+            if (liveUpdateInterval) clearInterval(liveUpdateInterval);
+            isLiveMode = false;
+            document.getElementById('liveIndicator').classList.add('hidden');
+            document.getElementById('meterStatus').innerText = "";
+            
+            // Reset Bars
+            document.querySelectorAll('[id^="bar"]').forEach(bar => bar.style.height = '0%');
+            document.querySelectorAll('[id^="pct"]').forEach(span => span.innerText = '0%');
+            document.querySelectorAll('[id^="emis"]').forEach(span => span.innerText = '0');
+        }
+    </script>
+</body>
+</html>
